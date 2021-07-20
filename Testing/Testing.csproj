@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net6.0</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Brsar\Brsar.csproj" />
+      <ProjectReference Include="..\Brstm\Brstm.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="LibHac" Version="0.13.1" />
+    </ItemGroup>
+
+</Project>
