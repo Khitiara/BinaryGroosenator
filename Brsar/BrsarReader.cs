@@ -1,49 +1,58 @@
 ﻿using System;
-using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.MemoryMappedFiles;
 using Brsar.Sound.Collection;
 using Brsar.Sound.Data;
+using LibHac.Fs;
+using LibHac.Fs.Fsa;
+using LibHac.FsSystem;
 using NxCore;
 
 namespace Brsar
 {
     public partial class BrsarReader : BinaryRevolutionReader, IDisposable
     {
-        public string WorkingDir { get; }
         public const uint BrsarHeaderMagic   = 0x52534152;
         public const uint SymbHeaderMagic    = 0x53594D42;
         public const uint InfoHeaderMagic    = 0x494E464F;
         public const uint FileHeaderMagic    = 0x46494C45;
         public const uint SectionOffsetShift = 0x8;
 
-        public BrsarHeader Header;
-        public SymbHeader  Symb;
-        public InfoHeader  Info;
-        public bool        FileIsBigEndian;
-        public uint        FileNamesCount;
-        public uint        FileCount;
-        public uint        SoundDataCount;
-
         public readonly Dictionary<uint, CollectionEntry> CollectionCache;
+        public readonly IFile                             File;
         public readonly Dictionary<uint, LazySoundData>   SoundDataCache;
-        public readonly MemoryMappedFile                  File;
+        public          uint                              FileCount;
+        public          bool                              FileIsBigEndian;
+        public          uint                              FileNamesCount;
 
-        // _handle will usually be a MemoryMappedViewStream by my estimation
-        public override MemoryMappedViewAccessor Handle { get; }
+        public BrsarHeader Header;
+        public InfoHeader  Info;
+        public uint        SoundDataCount;
+        public SymbHeader  Symb;
 
-        public BrsarReader(string workingDir, MemoryMappedFile file) {
+        public BrsarReader(IFileSystem workingFs, string workingDir, IFile file) {
+            WorkingFs = workingFs;
             WorkingDir = workingDir;
             Files = new FilesCollection(this);
             File = file;
-            Handle = File.CreateViewAccessor();
+            Handle = File.AsStorage();
             SoundDataCache = new Dictionary<uint, LazySoundData>();
             CollectionCache = new Dictionary<uint, CollectionEntry>();
         }
 
+        public IFileSystem WorkingFs { get; }
+        public string WorkingDir { get; }
+
+        // _handle will usually be a MemoryMappedViewStream by my estimation
+        public override IStorage Handle { get; }
+
+        public void Dispose() {
+            GC.SuppressFinalize(this);
+            Handle.Dispose();
+        }
+
         public override void Read() {
-            Handle.Read(0, out Header);
+            Handle.ReadStruct(0, out Header);
             FileIsBigEndian = Header.FixEndian();
             if (Header.Magic != BrsarHeaderMagic)
                 throw new IOException("Corrupted BSAR header");
@@ -53,10 +62,8 @@ namespace Brsar
                 throw new IOException("Corrupted SYMB Header");
 
             FileNamesCount =
-                BinaryPrimitives.ReverseEndianness(
-                    Handle.ReadUInt32(Header.SymbOffset + Symb.FileNameTableOffset + SectionOffsetShift));
-            FileCount = BinaryPrimitives.ReverseEndianness(
-                Handle.ReadUInt32(Header.InfoOffset + SectionOffsetShift + Info.CollectionTableOffset));
+                Handle.ReadUInt32BigEndian(Header.SymbOffset + Symb.FileNameTableOffset + SectionOffsetShift);
+            FileCount = Handle.ReadUInt32BigEndian(Header.InfoOffset + SectionOffsetShift + Info.CollectionTableOffset);
 
             DoMarshal(Header.InfoOffset, out Info);
             if (Info.Magic != InfoHeaderMagic)
@@ -64,8 +71,7 @@ namespace Brsar
 
 
             SoundDataCount =
-                BinaryPrimitives.ReverseEndianness(
-                    Handle.ReadUInt32(Header.InfoOffset + SectionOffsetShift + Info.SoundDataOffset));
+                Handle.ReadUInt32BigEndian(Header.InfoOffset + SectionOffsetShift + Info.SoundDataOffset);
         }
 
         public void MarshalSoundData(uint idx, out LazySoundData data) {
@@ -84,11 +90,6 @@ namespace Brsar
             };
 
             SoundDataCache[idx] = data;
-        }
-
-        public void Dispose() {
-            GC.SuppressFinalize(this);
-            Handle.Dispose();
         }
     }
 }

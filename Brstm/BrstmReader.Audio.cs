@@ -35,19 +35,19 @@ namespace Brstm
                 : HeaderChunk.SamplesPerBlock;
             ulong outputPos = (ulong)(HeaderChunk.SamplesPerBlock * b);
 
-            ulong position;
+            long position;
             if (!IsBrwav) {
-                position = (ulong)(HeaderChunk.BlockSizeBytes * c + b * HeaderChunk.BlockSizeBytes * ChannelCount);
+                position = HeaderChunk.BlockSizeBytes * c + b * HeaderChunk.BlockSizeBytes * ChannelCount;
                 if (b >= HeaderChunk.TotalInterlacedBlockCount - 1 && c > 0) {
-                    position += (ulong)(HeaderChunk.FinalBlockSizeWithPad * c -
-                                        HeaderChunk.BlockSizeBytes * (ChannelCount + ChannelCount - c));
+                    position += HeaderChunk.FinalBlockSizeWithPad * c -
+                                HeaderChunk.BlockSizeBytes * (ChannelCount + ChannelCount - c);
                 }
             } else {
-                position = (ulong)(b * HeaderChunk.BlockSizeBytes);
+                position = b * HeaderChunk.BlockSizeBytes;
             }
 
             Span<byte> block = new byte[curBlockSize];
-            Handle.SafeMemoryMappedViewHandle.ReadSpan(HeaderChunk.DataOffsetAbsolute + position, block);
+            Handle.Read(HeaderChunk.DataOffsetAbsolute + position, block);
 
             switch (HeaderChunk.Codec) {
                 case BrstmCodec.PCM8:

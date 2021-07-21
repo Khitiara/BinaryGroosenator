@@ -1,23 +1,29 @@
 ﻿using System;
 using System.IO;
-using System.IO.MemoryMappedFiles;
+using Arc;
 using Brsar;
+using LibHac.Fs;
+using LibHac.FsSystem;
 
 namespace Testing
 {
-    class Program
+    internal static class Program
     {
-        static void Main() {
+        internal static void Main() {
+            // SoundTest();
+            ArcTest.Decompress();
+        }
+
+        private static void SoundTest() {
             string workingDir = @"D:\Shared\roms\sshd\out\merge\romfs\Sound";
-            using MemoryMappedFile file =
-                MemoryMappedFile.CreateFromFile(Path.Combine(workingDir, "WZSound.brsar"));
-            using BrsarReader reader = new(workingDir, file);
+            using LocalFile file = new(workingDir, OpenMode.Read);
+            using BrsarReader reader = new(new LocalFileSystem(), workingDir, file);
             reader.Read();
 
             string outWorkDir = @"D:\Shared\roms\sshd\out\merge\romfs\Sound\Processed";
             Directory.CreateDirectory(outWorkDir);
 
-            for (uint i = 0; i < reader.SoundDataCount ; i++) {
+            for (uint i = 0; i < reader.SoundDataCount; i++) {
                 reader.MarshalSoundData(i, out LazySoundData data);
                 if (data is not LazyStrmData streamData) continue;
                 Console.WriteLine(streamData.Filename);

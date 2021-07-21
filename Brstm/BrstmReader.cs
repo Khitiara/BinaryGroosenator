@@ -2,34 +2,40 @@
 using System.Buffers.Binary;
 using System.IO;
 using System.IO.MemoryMappedFiles;
+using LibHac.Fs;
 using NxCore;
 
 namespace Brstm
 {
     public partial class BrstmReader : BinaryRevolutionReader, IDisposable
     {
-        public const uint                 FileTypeMagic = 0x5253544D;
-        public const uint                 HeaderMagic   = 0x48454144;
-        public const uint                 DataMagic     = 0x44415441;
-        public       BrstmHeader          Header;
-        public       HeadLeader           HeadLead;
-        public       HeadChunk            HeaderChunk;
-        public       byte                 TrackCount;
-        public       TrackDescriptionType TrackType;
-        public       TrackDescription[]   Tracks;
-        public       byte                 ChannelCount;
-        public       uint                 HeadOffset;
-        public       uint                 DataOffset;
-        public       uint                 DataLength;
+        public const uint     FileTypeMagic = 0x5253544D;
+        public const uint     HeaderMagic   = 0x48454144;
+        public const uint     DataMagic     = 0x44415441;
+        public       short[,] AdpcmCoeffs;
 
-        public short[,] AdpcmHsamples1;
-        public short[,] AdpcmHsamples2;
-        public short[,] AdpcmCoeffs;
-        public bool IsBrwav => false;
-        public override MemoryMappedViewAccessor Handle { get; }
+        public short[,]             AdpcmHsamples1;
+        public short[,]             AdpcmHsamples2;
+        public byte                 ChannelCount;
+        public uint                 DataLength;
+        public uint                 DataOffset;
+        public BrstmHeader          Header;
+        public HeadChunk            HeaderChunk;
+        public HeadLeader           HeadLead;
+        public uint                 HeadOffset;
+        public byte                 TrackCount;
+        public TrackDescription[]   Tracks;
+        public TrackDescriptionType TrackType;
 
-        public BrstmReader(MemoryMappedViewAccessor handle) {
+        public BrstmReader(IStorage handle) {
             Handle = handle;
+        }
+
+        public bool IsBrwav => false;
+        public override IStorage Handle { get; }
+
+        public void Dispose() {
+            Handle.Dispose();
         }
 
         public override void Read() {
@@ -72,16 +78,12 @@ namespace Brstm
             }
 
             DataOffset = Header.DataOffset;
-            if (BinaryPrimitives.ReverseEndianness(Handle.ReadUInt32(DataOffset)) != DataMagic) {
+            if (Handle.ReadUInt32BigEndian(DataOffset) != DataMagic) {
                 throw new IOException("Corrupt DATA header");
             }
 
-            DataLength = BinaryPrimitives.ReverseEndianness(Handle.ReadUInt32(DataOffset + 0x4));
+            DataLength = Handle.ReadUInt32BigEndian(DataOffset + 0x4);
             DataOffset += 0x8;
-        }
-
-        public void Dispose() {
-            Handle.Dispose();
         }
     }
 }

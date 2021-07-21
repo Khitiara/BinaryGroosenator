@@ -1,28 +1,26 @@
-﻿using System;
-using System.Buffers.Binary;
-using System.Collections.Generic;
-using System.IO.MemoryMappedFiles;
+﻿using System.Collections.Generic;
+using LibHac.Fs;
 
 namespace NxCore
 {
     public abstract class BinaryRevolutionReader
     {
-        public abstract MemoryMappedViewAccessor Handle { get; }
+        public abstract IStorage Handle { get; }
 
         public abstract void Read();
 
         public uint ReadOffsetFromTable(uint tableStart, uint width, uint idx) {
-            return BinaryPrimitives.ReverseEndianness(Handle.ReadUInt32(tableStart + width + width * idx));
+            return Handle.ReadUInt32BigEndian(tableStart + width + width * idx);
         }
 
         public void ReadBlockInfoFromOffsetTable(uint tableStart, uint idx, uint width, out uint offsetStart,
             out uint offsetEnd) {
             uint offset = width + width * idx;
             // Console.WriteLine(offset);
-            offsetStart = BinaryPrimitives.ReverseEndianness(Handle.ReadUInt32(tableStart + offset));
+            offsetStart = Handle.ReadUInt32BigEndian(tableStart + offset);
             // read four bytes to skip the enable flag since its always on
             offset += width;
-            offsetEnd = BinaryPrimitives.ReverseEndianness(Handle.ReadUInt32(tableStart + offset));
+            offsetEnd = Handle.ReadUInt32BigEndian(tableStart + offset);
         }
 
         public string ReadNullTermStringFromTable(uint offsetsRelative, uint tableOffset, uint idx) {
@@ -52,7 +50,7 @@ namespace NxCore
         public void DoMarshal<T>(uint address, out T t)
             where T : struct, IEndianAwareUnmanagedType {
             // Console.WriteLine($"{address:X8}");
-            Handle.Read(address, out t);
+            Handle.ReadStruct(address, out t);
             t.FixEndian();
         }
     }

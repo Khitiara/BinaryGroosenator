@@ -1,26 +1,44 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
-using System.IO.MemoryMappedFiles;
+using LibHac.Common;
+using LibHac.Fs;
+using LibHac.Fs.Fsa;
+using LibHac.FsSystem;
 using NAudio.Wave;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 
 namespace Brstm.IO
 {
-    public class BrstmWriter
+    public class BrstmWriter : IDisposable
     {
+        private readonly IFileSystem _fileSystem;
+
+        private readonly JsonSerializer _serializer = JsonSerializer.CreateDefault(new JsonSerializerSettings {
+            Formatting = Formatting.Indented,
+            ContractResolver = new DefaultContractResolver {
+                NamingStrategy = new SnakeCaseNamingStrategy()
+            }
+        });
+
+        public IFile  OriginalFile;
         public string OriginalFilePath;
         public string OutputDirectory;
 
-        public BrstmWriter(string originalFilePath, string outputDirectory) {
+        public BrstmWriter(IFileSystem fileSystem, string originalFilePath, string outputDirectory) {
+            _fileSystem = fileSystem;
             OriginalFilePath = originalFilePath;
+            fileSystem.OpenFile(out OriginalFile, new U8Span(originalFilePath), OpenMode.Read).ThrowIfFailure();
             OutputDirectory = outputDirectory;
         }
 
+        public void Dispose() {
+            OriginalFile.Dispose();
+        }
+
         public void WriteTracks() {
-            using MemoryMappedFile file = MemoryMappedFile.CreateFromFile(OriginalFilePath);
-            using MemoryMappedViewAccessor accessor = file.CreateViewAccessor();
-            BrstmReader reader = new BrstmReader(accessor);
+            BrstmReader reader = new(OriginalFile.AsStorage());
             reader.Read();
 
             List<BrstmTrackMetadata> metadata = new();
@@ -29,7 +47,9 @@ namespace Brstm.IO
                 BrstmInterleavingWaveProvider track = reader.WriteTrack(index);
                 string outPath = Path.Combine(OutputDirectory,
                     $"{Path.GetFileNameWithoutExtension(OriginalFilePath)}.{index}.brstm.wav");
-                WaveFileWriter.CreateWaveFile(outPath, track);
+                _fileSystem.OpenFile(out IFile wavFile, new U8Span(outPath), OpenMode.Write).ThrowIfFailure();
+                using (wavFile)
+                    WaveFileWriter.WriteWavFileToStream(wavFile.AsStream(), track);
                 metadata.Add(new BrstmTrackMetadata {
                     TrackId = index,
                     LoopStart = track.LoopStartSample,
@@ -37,16 +57,14 @@ namespace Brstm.IO
                 });
             }
 
-            using StreamWriter metaDataStream = File.CreateText(Path.Combine(OutputDirectory,
-                $"{Path.GetFileNameWithoutExtension(OriginalFilePath)}.brstm.json"));
-            using JsonTextWriter writer = new JsonTextWriter(metaDataStream);
-            JsonSerializer serializer = JsonSerializer.CreateDefault(new JsonSerializerSettings {
-                Formatting = Formatting.Indented,
-                ContractResolver = new DefaultContractResolver {
-                    NamingStrategy = new SnakeCaseNamingStrategy()
-                }
-            });
-            serializer.Serialize(writer, metadata);
+            string metaPath = PathTools.Combine(OutputDirectory,
+                $"{Path.GetFileNameWithoutExtension(OriginalFilePath)}.brstm.json");
+            _fileSystem.OpenFile(out IFile file, new U8Span(metaPath), OpenMode.Write).ThrowIfFailure();
+            using (file)
+            using (Stream stream = file.AsStream())
+            using (StreamWriter metaDataStream = new(stream))
+            using (JsonTextWriter writer = new(metaDataStream))
+                _serializer.Serialize(writer, metadata);
         }
     }
 }

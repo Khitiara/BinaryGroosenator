@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Buffers.Binary;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,7 +12,7 @@ namespace Brsar.Sound.Collection
         private Lazy<T>[] _lazies;
 
         public LazyBrsarOffsetTable(BrsarReader reader, uint offsetBase, uint tableOffset) {
-            Count = (int)BinaryPrimitives.ReverseEndianness(reader.Handle.ReadUInt32(offsetBase + tableOffset));
+            Count = (int)reader.Handle.ReadUInt32BigEndian(offsetBase + tableOffset);
             _lazies = new Lazy<T>[Count];
             for (uint i = 0; i < Count; i++) {
                 uint idx = i;
