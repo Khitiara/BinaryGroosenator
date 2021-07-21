@@ -7,7 +7,7 @@ using NxCore;
 
 namespace Brstm
 {
-    public partial class BrstmReader : BinaryRevolutionReader, IDisposable
+    public partial class BrstmReader : BinaryRevolutionReader
     {
         public const uint     FileTypeMagic = 0x5253544D;
         public const uint     HeaderMagic   = 0x48454144;
@@ -33,10 +33,6 @@ namespace Brstm
 
         public bool IsBrwav => false;
         public override IStorage Handle { get; }
-
-        public void Dispose() {
-            Handle.Dispose();
-        }
 
         public override void Read() {
             DoMarshal(0, out Header);

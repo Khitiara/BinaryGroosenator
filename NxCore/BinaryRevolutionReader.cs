@@ -1,11 +1,17 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using LibHac.Fs;
 
 namespace NxCore
 {
-    public abstract class BinaryRevolutionReader
+    public abstract class BinaryRevolutionReader : IDisposable
     {
         public abstract IStorage Handle { get; }
+
+        public void Dispose() {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
 
         public abstract void Read();
 
@@ -49,9 +55,15 @@ namespace NxCore
 
         public void DoMarshal<T>(uint address, out T t)
             where T : struct, IEndianAwareUnmanagedType {
-            // Console.WriteLine($"{address:X8}");
+            Console.WriteLine($"{address:X8}");
             Handle.ReadStruct(address, out t);
             t.FixEndian();
+        }
+
+        protected virtual void Dispose(bool disposing) {
+            if (disposing) {
+                Handle.Dispose();
+            }
         }
     }
 }

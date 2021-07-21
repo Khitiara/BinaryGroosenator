@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.CompilerServices;
 using LibHac;
 using LibHac.Common;
 using LibHac.Fs;
@@ -44,21 +43,25 @@ namespace Arc
             DoMarshal(Header.RootNodeOffset, out ArcNode rootNode);
             Nodes[0] = rootNode;
             Parents[0] = 0;
+            Paths[0] = Names[0] = "/";
+            PathLookup["/"] = 0;
             if (rootNode.Type != ArcNodeType.Directory)
                 throw new InvalidDataException("Root node must be a directory!");
             StringTableOffset = Header.RootNodeOffset + rootNode.Size * 0xC;
 
             Stack<uint> lastNodes = new();
             lastNodes.Push(rootNode.Size);
-            uint currentDirectory = 0, offset = Header.RootNodeOffset + 0xC;
-            for (uint i = 0; i < rootNode.Size; i++) {
+            uint currentDirectory = 0, offset = Header.RootNodeOffset;
+            for (uint i = 1; i < rootNode.Size; i++) {
                 if (i == lastNodes.Peek()) {
                     lastNodes.Pop();
                     currentDirectory = Parents[currentDirectory];
                 }
 
-                DoMarshal(offset, out ArcNode node);
-                string name = Handle.ReadNullTerm(StringTableOffset + node.NameOffset, 255);
+                DoMarshal(offset + 0xC * i, out ArcNode node);
+                uint stringTableOffset = StringTableOffset + node.NameOffset;
+                Console.WriteLine($"Name {i} at {stringTableOffset:X8}");
+                string name = Handle.ReadNullTerm(stringTableOffset, 255);
                 string path = PathTools.Combine(Paths[currentDirectory], name);
                 Nodes[i] = node;
                 Names[i] = name;

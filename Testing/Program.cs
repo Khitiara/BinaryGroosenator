@@ -2,6 +2,7 @@
 using System.IO;
 using Arc;
 using Brsar;
+using Khiti.Compression.NZLSS;
 using LibHac.Fs;
 using LibHac.FsSystem;
 
@@ -11,7 +12,29 @@ namespace Testing
     {
         internal static void Main() {
             // SoundTest();
-            ArcTest.Decompress();
+            ArcTest();
+        }
+
+        private static void ArcTest() {
+            string dir = @"D:\Shared\roms\sshd\out\merge\romfs\Stage\F301_3\NX";
+            string inFile = @"F301_3_stg_l0.arc.LZ";
+            string inPath = Path.Combine(dir, inFile);
+            string outFile = Path.GetFileNameWithoutExtension(inFile);
+            string outPath = Path.Combine(dir, outFile);
+            if (!File.Exists(outPath)) {
+                using FileStream inStream = File.OpenRead(inPath);
+                using FileStream outStream = File.OpenWrite(outPath);
+                Console.WriteLine(LZSS.Decompress(inStream, inStream.Length, outStream));
+            }
+
+            using LocalStorage storage = new(outPath, FileAccess.Read);
+            using ArcReader reader = new(storage);
+            reader.Read();
+            Console.WriteLine("\n");
+            foreach ((uint id, ArcNode node) in reader.Nodes) {
+                Console.WriteLine(
+                    $"{{Id: {id:X8}, Name: {reader.Paths[id]}, Offset: {node.DataOffset:X8}, Size: {node.Size:X8}}}");
+            }
         }
 
         private static void SoundTest() {

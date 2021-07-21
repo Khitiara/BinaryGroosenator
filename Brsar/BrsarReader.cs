@@ -10,7 +10,7 @@ using NxCore;
 
 namespace Brsar
 {
-    public partial class BrsarReader : BinaryRevolutionReader, IDisposable
+    public partial class BrsarReader : BinaryRevolutionReader
     {
         public const uint BrsarHeaderMagic   = 0x52534152;
         public const uint SymbHeaderMagic    = 0x53594D42;
@@ -45,11 +45,6 @@ namespace Brsar
 
         // _handle will usually be a MemoryMappedViewStream by my estimation
         public override IStorage Handle { get; }
-
-        public void Dispose() {
-            GC.SuppressFinalize(this);
-            Handle.Dispose();
-        }
 
         public override void Read() {
             Handle.ReadStruct(0, out Header);
