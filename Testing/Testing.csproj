@@ -9,6 +9,7 @@
       <ProjectReference Include="..\Arc\Arc.csproj"/>
       <ProjectReference Include="..\Brsar\Brsar.csproj" />
       <ProjectReference Include="..\Brstm\Brstm.csproj" />
+        <ProjectReference Include="..\Dialogue\Dialogue.csproj"/>
     </ItemGroup>
 
     <ItemGroup>

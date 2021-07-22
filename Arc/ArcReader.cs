@@ -148,6 +148,11 @@ namespace Arc
             protected override Result DoCommit() {
                 return Result.Success;
             }
+
+            protected override void Dispose(bool disposing) {
+                base.Dispose(disposing);
+                // TODO dispose logic 
+            }
         }
     }
 }

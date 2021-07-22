@@ -12,13 +12,13 @@ namespace NxCore
     {
         public static byte ReadByte(this IStorage storage, long position) {
             byte b = 0;
-            storage.Read(position, MemoryMarshal.AsBytes(MemoryMarshal.CreateSpan(ref b, 1)));
+            storage.Read(position, MemoryMarshal.AsBytes(MemoryMarshal.CreateSpan(ref b, 1))).ThrowIfFailure();
             return b;
         }
 
         public static uint ReadUInt32BigEndian(this IStorage storage, long position) {
             Span<byte> span = new byte[sizeof(uint)];
-            storage.Read(position, span);
+            storage.Read(position, span).ThrowIfFailure();
             return BinaryPrimitives.ReadUInt32BigEndian(span);
         }
 

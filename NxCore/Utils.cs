@@ -5,6 +5,7 @@ using System.IO.MemoryMappedFiles;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using LibHac.Util;
 
 namespace NxCore
 {
@@ -43,7 +44,16 @@ namespace NxCore
                 buffer[i++] = (byte)b;
             }
 
-            return Encoding.ASCII.GetString(buffer[..i]);
+            return StringUtils.NullTerminatedUtf8ToString(buffer);
+        }
+
+        public static void ReverseEndianness(ref ulong i) {
+            i = BinaryPrimitives.ReverseEndianness(i);
+        }
+
+        public static uint RoundUp16(uint i) {
+            if (i % 0x10 == 0) return i;
+            return i + 0x10 - i % 0x10;
         }
     }
 }

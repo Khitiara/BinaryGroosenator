@@ -2,8 +2,11 @@
 using System.IO;
 using Arc;
 using Brsar;
+using Dialogue.Msbt;
 using Khiti.Compression.NZLSS;
+using LibHac.Common;
 using LibHac.Fs;
+using LibHac.Fs.Fsa;
 using LibHac.FsSystem;
 
 namespace Testing
@@ -12,7 +15,32 @@ namespace Testing
     {
         internal static void Main() {
             // SoundTest();
-            ArcTest();
+            // ArcTest();
+            MsbtTest();
+        }
+
+        private static void MsbtTest() {
+            string arcPath = @"D:\Shared\roms\sshd\out\merge\romfs\US\Object\en_US\2-Forest.arc";
+            using LocalStorage storage = new(arcPath, FileAccess.Read);
+            using ArcReader reader = new(storage);
+            reader.Read();
+            Console.WriteLine("\n");
+            foreach ((uint id, ArcNode node) in reader.Nodes) {
+                Console.WriteLine(
+                    $"{{Id: {id:X8}, Name: {reader.Paths[id]}, Offset: {node.DataOffset:X8}, Size: {node.Size:X8}}}");
+            }
+
+            Console.WriteLine("\n");
+            string pathInArc = "/2-Forest/200-Forest.msbt";
+            using IFileSystem fs = reader.Open();
+            fs.OpenFile(out IFile file, (U8Span)pathInArc, OpenMode.Read).ThrowIfFailure();
+            using (file)
+            using (MsbtReader msbtReader = new(file.AsStorage())) {
+                msbtReader.Read();
+                foreach ((string label, string text) in msbtReader.AllText) {
+                    Console.WriteLine($"{label}:\t{text}");
+                }
+            }
         }
 
         private static void ArcTest() {

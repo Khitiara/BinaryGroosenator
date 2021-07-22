@@ -14,6 +14,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Arc", "Arc\Arc.csproj", "{D
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nlzss", "Nlzss\Nlzss.csproj", "{6B3C989B-B1AE-4E8F-AAB1-910E2391E06C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dialogue", "Dialogue\Dialogue.csproj", "{6594ABD9-A309-4DBF-981B-2599014C9F00}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -48,5 +50,9 @@ Global
 		{6B3C989B-B1AE-4E8F-AAB1-910E2391E06C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6B3C989B-B1AE-4E8F-AAB1-910E2391E06C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6B3C989B-B1AE-4E8F-AAB1-910E2391E06C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6594ABD9-A309-4DBF-981B-2599014C9F00}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6594ABD9-A309-4DBF-981B-2599014C9F00}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6594ABD9-A309-4DBF-981B-2599014C9F00}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6594ABD9-A309-4DBF-981B-2599014C9F00}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
