@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using LibHac;
 using LibHac.Common;
 using LibHac.Fs;
 using LibHac.Fs.Fsa;
 using LibHac.FsSystem;
+using LibHac.Util;
 using NxCore;
 
 namespace Arc
@@ -134,24 +136,75 @@ namespace Arc
                 if (mode != OpenMode.Read)
                     return ResultFs.UnsupportedWriteForReadOnlyFileSystem.Log();
                 string pathString = path.ToString();
-                if (!_reader.PathLookup.ContainsKey(pathString)) return ResultFs.PathNotFound.Log();
+                if (!_reader.PathLookup.ContainsKey(pathString))
+                    return ResultFs.PathNotFound.Log();
                 uint id = _reader.PathLookup[pathString];
                 ArcNode node = _reader.Nodes[id];
+                if (node.Type != ArcNodeType.File)
+                    return ResultFs.PathNotFound.Log();
                 file = _reader.Handle.Slice(node.DataOffset, node.Size).AsFile(mode);
                 return Result.Success;
             }
 
             protected override Result DoOpenDirectory(out IDirectory directory, U8Span path, OpenDirectoryMode mode) {
-                throw new System.NotImplementedException();
+                UnsafeHelpers.SkipParamInit(out directory);
+                string pathString = path.ToString();
+                if (!_reader.PathLookup.ContainsKey(pathString))
+                    return ResultFs.PathNotFound.Log();
+                uint id = _reader.PathLookup[pathString];
+                ArcNode node = _reader.Nodes[id];
+                if (node.Type != ArcNodeType.Directory)
+                    return ResultFs.PathNotFound.Log();
+                directory = new ArcFsDirectory(_reader, id);
+                return Result.Success;
             }
 
             protected override Result DoCommit() {
                 return Result.Success;
             }
 
-            protected override void Dispose(bool disposing) {
-                base.Dispose(disposing);
-                // TODO dispose logic 
+            private class ArcFsDirectory : IDirectory
+            {
+                private readonly uint      _id;
+                private readonly ArcReader _reader;
+                private          uint[]    _childIds;
+                private          bool      _initialized;
+
+                public ArcFsDirectory(ArcReader reader, uint id) {
+                    _reader = reader;
+                    _id = id;
+                    _initialized = false;
+                }
+
+                private void Init() {
+                    _childIds = _reader.Parents.Where(kvp => kvp.Value == _id).Select(kvp => kvp.Key).ToArray();
+                }
+
+                protected override Result DoRead(out long entriesRead, Span<DirectoryEntry> entryBuffer) {
+                    if (!_initialized) Init();
+                    entriesRead = Math.Max(entryBuffer.Length, _childIds.Length);
+                    for (int i = 0; i < entriesRead; i++) {
+                        uint id = _childIds[i];
+                        StringUtils.Copy(entryBuffer[i].Name, StringUtils.StringToUtf8(_reader.Names[id]));
+                        entryBuffer[i].Attributes = _reader.Nodes[id].Type == ArcNodeType.Directory
+                            ? NxFileAttributes.Directory
+                            : NxFileAttributes.None;
+                        entryBuffer[i].Type = _reader.Nodes[id].Type switch {
+                            ArcNodeType.File => DirectoryEntryType.File,
+                            ArcNodeType.Directory => DirectoryEntryType.Directory,
+                            _ => throw new ArgumentOutOfRangeException()
+                        };
+                        entryBuffer[i].Size = _reader.Nodes[id].Size;
+                    }
+
+                    return Result.Success;
+                }
+
+                protected override Result DoGetEntryCount(out long entryCount) {
+                    if (!_initialized) Init();
+                    entryCount = _childIds.Length;
+                    return Result.Success;
+                }
             }
         }
     }
